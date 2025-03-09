@@ -121,8 +121,6 @@ sudo systemctl restart nginx
 
 ---
 
----
-
 ## **7. Find Your Public IP and Access the Application**  
 Retrieve the **public IP** of your Ubuntu VM:  
 
