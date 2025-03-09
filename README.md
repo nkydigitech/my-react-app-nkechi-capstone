@@ -1,70 +1,168 @@
-# Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# **Deploy a This Application on Ubuntu VM with Nginx**
 
-## Available Scripts
+This guide provides step-by-step instructions to deploy and run a **This React application** on an **Ubuntu VM** using **Nginx**, making it accessible from a **public IP**.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## **1. Install Nginx**
+First, update package lists and install Nginx:
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```sh
+sudo apt update
+sudo apt install -y nginx
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Start and enable Nginx:
 
-### `npm test`
+```sh
+sudo systemctl start nginx
+sudo systemctl enable nginx
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Verify that Nginx is running:
 
-### `npm run build`
+```sh
+systemctl status nginx
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+You should see that Nginx is **active and running**.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## **2. Clone the React App and Build It**
+Navigate to a temporary directory and **clone the repository**:
 
-### `npm run eject`
+```sh
+cd /tmp
+git clone git@github.com:pravinmishraaws/my-react-app.git
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Move into the project directory:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```sh
+cd my-react-app
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Install dependencies:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```sh
+npm install
+```
 
-## Learn More
+Build the React app for production:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```sh
+npm run build
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+This will create a `build/` folder with the **static files** for deployment.
 
-### Code Splitting
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## **3. Deploy the Build Files to the Web Directory**
+First, **remove any existing files** in the Nginx web directory:
 
-### Analyzing the Bundle Size
+```sh
+sudo rm -rf /var/www/html/*
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Now, **copy the newly built React files** to `/var/www/html/`:
 
-### Making a Progressive Web App
+```sh
+sudo cp -r build/* /var/www/html/
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Ensure the files have the correct ownership and permissions:
 
-### Advanced Configuration
+```sh
+sudo chown -R www-data:www-data /var/www/html
+sudo chmod -R 755 /var/www/html
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
+## **4. Configure Nginx to Serve the React App**
+Edit the Nginx configuration:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+```sh
+sudo nano /etc/nginx/sites-available/default
+```
 
-### `npm run build` fails to minify
+Replace the content with:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/html;
+    index index.html;
+
+    location / {
+        try_files $uri /index.html;
+    }
+
+    error_page 404 /index.html;
+}
+```
+
+Save the file (`CTRL + X`, then `Y`, then `ENTER`).
+
+Restart Nginx to apply the changes:
+
+```sh
+sudo systemctl restart nginx
+```
+
+---
+
+## **5. Open Firewall for Public Access**
+If **UFW (Uncomplicated Firewall)** is enabled, allow HTTP traffic:
+
+```sh
+sudo ufw allow 'Nginx Full'
+```
+
+To check if the firewall is active:
+
+```sh
+sudo ufw status
+```
+
+---
+
+## **6. Find Your Public IP and Share It with Students**
+To find the **public IP** of your Ubuntu VM, run:
+
+```sh
+curl ifconfig.me
+```
+
+Now, students can **access the application** in their browser using:
+
+```
+http://<public-ip>
+```
+
+For example, if the public IP is `203.0.113.25`, students should visit:
+
+```
+http://203.0.113.25
+```
+
+---
+
+## **7. Verify the Deployment**
+To ensure the application is running correctly, run:
+
+```sh
+curl localhost
+```
+
+If everything is set up properly, you should see the HTML content of the React app.
+
+---
+
+## **Conclusion**
+**Your React app is now deployed on an Ubuntu VM using Nginx and accessible from the public IP!**   
