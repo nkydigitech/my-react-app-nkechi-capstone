@@ -53,6 +53,30 @@ git clone https://github.com/pravinmishraaws/my-react-app.git
 cd my-react-app
 ```
 
+**Open the App.js file**
+
+Navigate to your React app’s source folder:
+
+```sh
+cd my-react-app/src
+```
+
+Open the App.js file in a text editor:
+
+```sh
+nano App.js
+```
+(or use vi/vim if you prefer)
+
+Modify the content
+
+```sh
+<h2>Deployed by: <strong>Your Full Name</strong></h2>
+<p>Date: <strong>DD/MM/YYYY</strong></p>
+```
+
+Update your details like: Your Full Name & Date
+
 ---
 
 ## **4. Install Dependencies and Build the React App**  
