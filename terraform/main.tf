@@ -5,6 +5,7 @@ terraform {
       version = "~> 5.0"
     }
   }
+
   required_version = ">= 1.5.0"
 }
 
@@ -13,7 +14,7 @@ provider "aws" {
 }
 
 # -----------------------------
-# S3 Bucket (already exists)
+# S3 BUCKET (Terraform-managed)
 # -----------------------------
 resource "aws_s3_bucket" "react_app" {
   bucket = var.bucket_name
@@ -25,6 +26,9 @@ resource "aws_s3_bucket" "react_app" {
   }
 }
 
+# -----------------------------
+# PUBLIC ACCESS BLOCK
+# -----------------------------
 resource "aws_s3_bucket_public_access_block" "react_app" {
   bucket = aws_s3_bucket.react_app.id
 
@@ -35,7 +39,7 @@ resource "aws_s3_bucket_public_access_block" "react_app" {
 }
 
 # -----------------------------
-# CloudFront Origin Access Control (already exists)
+# OAC (IMPORT ONLY - already exists in AWS)
 # -----------------------------
 resource "aws_cloudfront_origin_access_control" "react_app" {
   name                              = "react-app-oac"
@@ -43,10 +47,14 @@ resource "aws_cloudfront_origin_access_control" "react_app" {
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # -----------------------------
-# S3 Bucket Policy to allow OAC
+# S3 BUCKET POLICY (LOCKED TO YOUR EXISTING CLOUDFRONT DISTRIBUTION)
 # -----------------------------
 resource "aws_s3_bucket_policy" "react_app" {
   bucket = aws_s3_bucket.react_app.id
@@ -55,82 +63,23 @@ resource "aws_s3_bucket_policy" "react_app" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "AllowCloudFrontServicePrincipal"
+        Sid    = "AllowCloudFrontOnly"
         Effect = "Allow"
+
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
+
         Action   = "s3:GetObject"
         Resource = "${aws_s3_bucket.react_app.arn}/*"
+
         Condition = {
           StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.react_app.arn
+            # 🔥 IMPORTANT: your REAL CloudFront ID
+            "AWS:SourceArn" = "arn:aws:cloudfront::483519904572:distribution/EDPODDH96UG7Y"
           }
         }
       }
     ]
   })
-}
-
-# -----------------------------
-# CloudFront Distribution
-# -----------------------------
-resource "aws_cloudfront_distribution" "react_app" {
-  origin {
-    domain_name              = aws_s3_bucket.react_app.bucket_regional_domain_name
-    origin_access_control_id = aws_cloudfront_origin_access_control.react_app.id
-    origin_id                = "S3-${aws_s3_bucket.react_app.id}"
-  }
-
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "React App CDN"
-  default_root_object = "index.html"
-
-  default_cache_behavior {
-    allowed_methods  = ["GET", "HEAD"]
-    cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "S3-${aws_s3_bucket.react_app.id}"
-
-    forwarded_values {
-      query_string = false
-      cookies {
-        forward = "none"
-      }
-    }
-
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-  }
-
-  # SPA routing: return index.html for 403/404 errors
-  custom_error_response {
-    error_code         = 403
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
-
-  custom_error_response {
-    error_code         = 404
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
-
-  tags = {
-    Name        = "my-react-app-cdn"
-    Environment = "production"
-    ManagedBy   = "terraform"
-  }
 }

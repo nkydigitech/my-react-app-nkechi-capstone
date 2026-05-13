@@ -5,6 +5,6 @@ variable "aws_region" {
 }
 
 variable "bucket_name" {
-  description = "Existing S3 bucket name"
+  description = "S3 bucket name"
   type        = string
 }

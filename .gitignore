@@ -18,7 +18,8 @@ yarn-error.log*
 *.tfstate.*
 terraform.tfvars
 crash.log
-
+*.tfstate.backup
+.terraform.lock.hcl
 # OS / editor
 .DS_Store
 .vscode/
