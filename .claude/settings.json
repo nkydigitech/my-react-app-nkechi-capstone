@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "name": "user-prompt-guard",
+        "command": "python3 .claude/hooks/user-prompt-guard.py",
+        "description": "Blocks prompts containing AWS secrets, access keys, or credentials from being submitted to the model"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "name": "pre-tool-guard",
+        "command": "python3 .claude/hooks/pre-tool-guard.py",
+        "description": "Prevents destructive operations: terraform destroy, rm -rf, bucket deletion without explicit confirmation"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "name": "post-tool-logger",
+        "command": "python3 .claude/hooks/post-tool-logger.py",
+        "description": "Logs all tool executions with timestamps, tool name, and exit codes to .claude/logs/tool-usage.log"
+      }
+    ]
+  }
+}

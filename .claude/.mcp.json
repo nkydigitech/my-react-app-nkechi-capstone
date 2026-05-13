@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "aws": {
+      "command": "uvx",
+      "args": ["awslabs.aws-mcp-server"],
+      "description": "AWS MCP server for resource queries and infrastructure introspection"
+    },
+    "terraform": {
+      "command": "uvx",
+      "args": ["terraform-mcp-server"],
+      "description": "Terraform MCP server for plan/apply operations and state management"
+    }
+  }
+}
