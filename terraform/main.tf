@@ -12,7 +12,9 @@ provider "aws" {
   region = var.aws_region
 }
 
-# S3 Bucket for React App
+# -----------------------------
+# S3 Bucket (already exists)
+# -----------------------------
 resource "aws_s3_bucket" "react_app" {
   bucket = var.bucket_name
 
@@ -23,7 +25,6 @@ resource "aws_s3_bucket" "react_app" {
   }
 }
 
-# Block all public access (CloudFront uses OAC)
 resource "aws_s3_bucket_public_access_block" "react_app" {
   bucket = aws_s3_bucket.react_app.id
 
@@ -33,7 +34,9 @@ resource "aws_s3_bucket_public_access_block" "react_app" {
   restrict_public_buckets = true
 }
 
-# CloudFront Origin Access Control
+# -----------------------------
+# CloudFront Origin Access Control (already exists)
+# -----------------------------
 resource "aws_cloudfront_origin_access_control" "react_app" {
   name                              = "react-app-oac"
   description                       = "OAC for React App S3 bucket"
@@ -42,23 +45,52 @@ resource "aws_cloudfront_origin_access_control" "react_app" {
   signing_protocol                  = "sigv4"
 }
 
-# CloudFront Distribution
-resource "aws_cloudfront_distribution" "react_app" {
-  enabled             = true
-  default_root_object = "index.html"
-  comment             = "React App CDN"
+# -----------------------------
+# S3 Bucket Policy to allow OAC
+# -----------------------------
+resource "aws_s3_bucket_policy" "react_app" {
+  bucket = aws_s3_bucket.react_app.id
 
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCloudFrontServicePrincipal"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.react_app.arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = aws_cloudfront_distribution.react_app.arn
+          }
+        }
+      }
+    ]
+  })
+}
+
+# -----------------------------
+# CloudFront Distribution
+# -----------------------------
+resource "aws_cloudfront_distribution" "react_app" {
   origin {
     domain_name              = aws_s3_bucket.react_app.bucket_regional_domain_name
-    origin_id                = "S3-${aws_s3_bucket.react_app.id}"
     origin_access_control_id = aws_cloudfront_origin_access_control.react_app.id
+    origin_id                = "S3-${aws_s3_bucket.react_app.id}"
   }
 
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "React App CDN"
+  default_root_object = "index.html"
+
   default_cache_behavior {
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "S3-${aws_s3_bucket.react_app.id}"
-    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods  = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "S3-${aws_s3_bucket.react_app.id}"
 
     forwarded_values {
       query_string = false
@@ -67,12 +99,13 @@ resource "aws_cloudfront_distribution" "react_app" {
       }
     }
 
-    min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
   }
 
-  # SPA routing — serve index.html for 403/404
+  # SPA routing: return index.html for 403/404 errors
   custom_error_response {
     error_code         = 403
     response_code      = 200
@@ -100,29 +133,4 @@ resource "aws_cloudfront_distribution" "react_app" {
     Environment = "production"
     ManagedBy   = "terraform"
   }
-}
-
-# S3 Bucket Policy — allow CloudFront OAC access
-resource "aws_s3_bucket_policy" "react_app" {
-  bucket = aws_s3_bucket.react_app.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "AllowCloudFrontServicePrincipal"
-        Effect    = "Allow"
-        Principal = {
-          Service = "cloudfront.amazonaws.com"
-        }
-        Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.react_app.arn}/*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceArn" = aws_cloudfront_distribution.react_app.arn
-          }
-        }
-      }
-    ]
-  })
 }

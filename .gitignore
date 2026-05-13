@@ -12,3 +12,13 @@ yarn-error.log*
 .DS_Store
 *.log
 *.swp
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+crash.log
+
+# OS / editor
+.DS_Store
+.vscode/
